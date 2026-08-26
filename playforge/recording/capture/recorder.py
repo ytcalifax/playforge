@@ -106,9 +106,9 @@ class InteractiveRecorder:
             with sync_playwright() as p:
                 browser = p.chromium.launch(headless=self.headless)
                 context = browser.new_context(ignore_https_errors=True)
-                context.on("page", self._attach_recorder)
                 page = context.new_page()
                 self._attach_recorder(page)
+                context.on("page", self._attach_recorder)
                 try:
                     page.goto(self.url, wait_until="domcontentloaded")
                 except Error:
