@@ -46,6 +46,17 @@ class InteractiveRecorder:
                     if (!el) return '';
                     return (el.textContent || '').replace(/\s+/g, ' ').trim();
                 };
+                const getSiblingPosition = (el) => {
+                    if (!el || !el.tagName) return 0;
+                    const tag = el.tagName.toLowerCase();
+                    const cls = typeof el.className === 'string' ? el.className.trim() : '';
+                    const all = Array.from(document.querySelectorAll(tag)).filter((node) => {
+                        const nodeCls = typeof node.className === 'string' ? node.className.trim() : '';
+                        return nodeCls === cls;
+                    });
+                    const idx = all.indexOf(el);
+                    return idx >= 0 ? idx : 0;
+                };
                 const getElementId = (el) => {
                     if (!el) return '';
                     if (el.id) return el.id;
@@ -77,7 +88,8 @@ class InteractiveRecorder:
                             className: typeof el.className === 'string' ? el.className.trim() : '',
                             text: getText(el),
                             isLambdaRole: Boolean(el.tagName && el.tagName.toLowerCase() === 'a' && el.parentElement && el.parentElement.getAttribute('role')),
-                            value: el.value || ''
+                            value: el.value || '',
+                            position: getSiblingPosition(el)
                         });
                     }, true);
                     document.addEventListener('dblclick', (e) => {
@@ -87,13 +99,13 @@ class InteractiveRecorder:
                         if (!['label', 'p', 'span', 'div', 'li', 'td', 'th', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'strong', 'small'].includes(tag)) return;
                         const textVal = getText(el);
                         if (!textVal) return;
-                        sendAction({ type: 'get', tagName: tag, id: getElementId(el), className: typeof el.className === 'string' ? el.className.trim() : '', text: textVal, isLambdaRole: false, value: '' });
+                        sendAction({ type: 'get', tagName: tag, id: getElementId(el), className: typeof el.className === 'string' ? el.className.trim() : '', text: textVal, isLambdaRole: false, value: '', position: getSiblingPosition(el) });
                     }, true);
                     document.addEventListener('change', (e) => {
                         const el = e.target;
                         if (!el) return;
                         const isSelect = el.tagName && el.tagName.toLowerCase() === 'select';
-                        sendAction({ type: isSelect ? 'select' : 'fill', tagName: el.tagName ? el.tagName.toLowerCase() : '', id: getElementId(el), className: typeof el.className === 'string' ? el.className.trim() : '', text: getText(el), isLambdaRole: false, value: el.value || '' });
+                        sendAction({ type: isSelect ? 'select' : 'fill', tagName: el.tagName ? el.tagName.toLowerCase() : '', id: getElementId(el), className: typeof el.className === 'string' ? el.className.trim() : '', text: getText(el), isLambdaRole: false, value: el.value || '', position: getSiblingPosition(el) });
                     }, true);
                 });
             })();

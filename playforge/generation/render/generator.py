@@ -17,6 +17,9 @@ class CodeGenerator:
 
     @staticmethod
     def _locator_expr_for_action(act: Action) -> str:
+        if act.class_name and act.type == "get":
+            classes = "." + ".".join([c for c in act.class_name.split() if c])
+            return f'page.locator("{classes}").nth({getattr(act, "position", 0)})'
         if act.id:
             if act.class_name:
                 classes = "." + ".".join([c for c in act.class_name.split() if c])
@@ -48,6 +51,12 @@ class CodeGenerator:
                     base_var_name = "ACTION_TYPE"
                     loc_expr = "lambda item_text: page.locator(f\"//li[@role]/a[text()='{item_text}']\")"
                     param_name = "job_type"
+                elif act.type == "get" and act.class_name:
+                    base_var_name = LocatorSanitizer.sanitize_var_name(
+                        f"{act.class_name}_{act.tag_name}_{getattr(act, 'position', 0) + 1}"
+                    )
+                    loc_expr = self._locator_expr_for_action(act)
+                    param_name = f"text_{act_idx}"
                 elif act.id:
                     base_var_name = LocatorSanitizer.sanitize_var_name(act.id)
                     loc_expr = self._locator_expr_for_action(act)

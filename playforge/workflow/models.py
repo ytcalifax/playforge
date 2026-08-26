@@ -15,6 +15,7 @@ class Action:
     text: str = ""
     is_lambda_role: bool = False
     value: str = ""
+    position: int = 0
 
     @classmethod
     def from_mapping(cls, action: dict[str, Any]) -> "Action":
@@ -28,6 +29,7 @@ class Action:
             text=str(action.get("text", "") or "").replace("\xa0", " ").strip(),
             is_lambda_role=bool(action.get("isLambdaRole", False)),
             value=str(action.get("value", "") or ""),
+            position=int(action.get("position", 0) or 0),
         )
 
 
