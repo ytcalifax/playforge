@@ -28,6 +28,9 @@ classifiers = [
 keywords = ["playwright", "page-object", "recorder", "testing", "automation"]
 dependencies = ["playwright>=1.62.0.0", "ruff>=0.16.46.0", "structlog>=26.1.0.0"]
 
+[project.scripts]
+playforge = "playforge.cli.main:main"
+
 [project.urls]
 Homepage = "https://github.com/ytcalifax/playforge"
 Repository = "https://github.com/ytcalifax/playforge.git"
