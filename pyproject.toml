@@ -1,0 +1,40 @@
+[build-system]
+requires = ["setuptools>=69", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "playforge"
+version = "1.o.0"
+description = "Interactive Playwright recorder that turns browser actions into code"
+readme = {file = "README.md", content-type = "text/markdown"}
+authors = [{name = "ytcalifax (98w)", email = "hello@98w.eu"}]
+requires-python = ">=3.10"
+license = "MIT"
+license-files = ["LICENSE.md"]
+classifiers = [
+    "Development Status :: 5 - Production/Stable",
+    "Intended Audience :: Developers",
+    "Natural Language :: English",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3 :: Only",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Topic :: Software Development :: Testing",
+    "Topic :: Software Development :: Libraries :: Python Modules",
+    "Topic :: Utilities",
+]
+keywords = ["playwright", "page-object", "recorder", "testing", "automation"]
+dependencies = ["playwright>=1.46.0", "ruff>=0.6.0"]
+
+[project.urls]
+Homepage = "https://github.com/ytcalifax/playforge"
+Repository = "https://github.com/ytcalifax/playforge.git"
+"Bug Tracker" = "https://github.com/ytcalifax/playforge/issues"
+Changelog = "https://github.com/ytcalifax/playforge/blob/main/CHANGELOG.md"
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["playforge*"]
+exclude = ["*__pycache__*"]
