@@ -19,12 +19,10 @@ class CodeGenerator:
     def _locator_expr_for_action(act: Action) -> str:
         if act.class_name and act.type == "get":
             classes = "." + ".".join([c for c in act.class_name.split() if c])
-            return f'page.locator("{classes}").nth({getattr(act, "position", 0)})'
+            return f'page.locator("{classes}")'
         if act.id:
-            if act.class_name:
-                classes = "." + ".".join([c for c in act.class_name.split() if c])
-                return f"page.locator(\"{classes} [id='{LocatorSanitizer.escape_selector_value(act.id)}']\")"
-            return f"page.locator(\"[id='{LocatorSanitizer.escape_selector_value(act.id)}']\")"
+            tag = act.tag_name or "*"
+            return f'page.locator("{tag}#{LocatorSanitizer.escape_selector_value(act.id)}")'
         if act.text:
             safe_text = LocatorSanitizer.escape_selector_value(
                 LocatorSanitizer.normalize_text(act.text)
@@ -53,7 +51,7 @@ class CodeGenerator:
                     param_name = "job_type"
                 elif act.type == "get" and act.class_name:
                     base_var_name = LocatorSanitizer.sanitize_var_name(
-                        f"{act.class_name}_{act.tag_name}_{getattr(act, 'position', 0) + 1}"
+                        f"{act.class_name}_{act.tag_name}"
                     )
                     loc_expr = self._locator_expr_for_action(act)
                     param_name = f"text_{act_idx}"
@@ -100,15 +98,24 @@ class CodeGenerator:
                         method_steps.append(f"self.{var_name}.fill({curr_param})")
                     else:
                         method_steps.append(
-                            f"self.{var_name}.select_option({curr_param})"
+                            f"self.{var_name}.select_option(label={curr_param})"
+                        )
+                        method_steps.append(
+                            f'self.{var_name}.dispatch_event("change")'
                         )
                 elif act.type == "get":
-                    method_steps.append(
-                        f'self.{var_name}.wait_for(state="visible", timeout=30000)'
-                    )
-                    method_steps.append(
-                        f"return self.{var_name}.inner_text().strip() or self.{var_name}.text_content() or ''"
-                    )
+                    if act.class_name:
+                        param_list.append("n: int")
+                        method_steps.append(f"locator = self.{var_name}.nth(n)")
+                        method_steps.append(
+                            f'locator.wait_for(state="visible", timeout=30000)'
+                        )
+                        method_steps.append("return locator")
+                    else:
+                        method_steps.append(
+                            f'self.{var_name}.wait_for(state="visible", timeout=30000)'
+                        )
+                        method_steps.append(f"return self.{var_name}")
 
             unique_params = []
             seen = set()
