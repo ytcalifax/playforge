@@ -33,6 +33,13 @@ def main() -> None:
     logger.info("cli_started", url=args.url, output=args.output, headless=args.headless)
     workflow_manager = WorkflowManager()
     recorder = InteractiveRecorder(args.url, workflow_manager, headless=args.headless)
-    recorder.run()
+    try:
+        completed = recorder.run()
+    except KeyboardInterrupt:
+        logger.info("cli_interrupted")
+        return
+    if not completed:
+        logger.info("cli_interrupted")
+        return
     CodeGenerator(workflow_manager).generate(args.output)
     logger.info("cli_finished", output=args.output)

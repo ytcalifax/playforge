@@ -46,6 +46,21 @@ class InteractiveRecorder:
                     if (!el) return '';
                     return (el.textContent || '').replace(/\s+/g, ' ').trim();
                 };
+                const getElementId = (el) => {
+                    if (!el) return '';
+                    if (el.id) return el.id;
+                    const labeledBy = el.getAttribute && el.getAttribute('aria-label');
+                    if (labeledBy) return labeledBy.trim();
+                    if ('name' in el && typeof el.name === 'string' && el.name.trim()) return el.name.trim();
+                    if ('placeholder' in el && typeof el.placeholder === 'string' && el.placeholder.trim()) return el.placeholder.trim();
+                    if (el.getAttribute) {
+                        const testId = el.getAttribute('data-testid') || el.getAttribute('data-test') || el.getAttribute('data-qa');
+                        if (testId) return testId.trim();
+                    }
+                    const text = getText(el);
+                    if (text) return text;
+                    return el.tagName ? el.tagName.toLowerCase() : '';
+                };
                 const isInteractive = (el) => {
                     if (!el || !el.tagName) return false;
                     const tag = el.tagName.toLowerCase();
@@ -58,7 +73,7 @@ class InteractiveRecorder:
                         sendAction({
                             type: 'click',
                             tagName: el.tagName ? el.tagName.toLowerCase() : '',
-                            id: el.id || '',
+                            id: getElementId(el),
                             className: typeof el.className === 'string' ? el.className.trim() : '',
                             text: getText(el),
                             isLambdaRole: Boolean(el.tagName && el.tagName.toLowerCase() === 'a' && el.parentElement && el.parentElement.getAttribute('role')),
@@ -72,68 +87,72 @@ class InteractiveRecorder:
                         if (!['label', 'p', 'span', 'div', 'li', 'td', 'th', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'strong', 'small'].includes(tag)) return;
                         const textVal = getText(el);
                         if (!textVal) return;
-                        sendAction({ type: 'get', tagName: tag, id: el.id || '', className: typeof el.className === 'string' ? el.className.trim() : '', text: textVal, isLambdaRole: false, value: '' });
+                        sendAction({ type: 'get', tagName: tag, id: getElementId(el), className: typeof el.className === 'string' ? el.className.trim() : '', text: textVal, isLambdaRole: false, value: '' });
                     }, true);
                     document.addEventListener('change', (e) => {
                         const el = e.target;
                         if (!el) return;
                         const isSelect = el.tagName && el.tagName.toLowerCase() === 'select';
-                        sendAction({ type: isSelect ? 'select' : 'fill', tagName: el.tagName ? el.tagName.toLowerCase() : '', id: el.id || '', className: typeof el.className === 'string' ? el.className.trim() : '', text: getText(el), isLambdaRole: false, value: el.value || '' });
+                        sendAction({ type: isSelect ? 'select' : 'fill', tagName: el.tagName ? el.tagName.toLowerCase() : '', id: getElementId(el), className: typeof el.className === 'string' ? el.className.trim() : '', text: getText(el), isLambdaRole: false, value: el.value || '' });
                     }, true);
                 });
             })();
         """)
 
-    def run(self) -> None:
+    def run(self) -> bool:
         self.logger.info("recorder_started", url=self.url, headless=self.headless)
-        with sync_playwright() as p:
-            browser = p.chromium.launch(headless=self.headless)
-            context = browser.new_context(ignore_https_errors=True)
-            context.on("page", self._attach_recorder)
-            page = context.new_page()
-            self._attach_recorder(page)
-            try:
-                page.goto(self.url, wait_until="domcontentloaded")
-            except Error:
-                pass
-            print("\n=== INTERACTIVE RECORDER ACTIVE ===")
-            print(
-                "Commands:\n  split -> Start a new workflow function block\n  clear -> Remove the last recorded action\n  quit  -> Stop recording and generate Page Object code\n===================================\n"
-            )
+        interrupted = False
+        try:
+            with sync_playwright() as p:
+                browser = p.chromium.launch(headless=self.headless)
+                context = browser.new_context(ignore_https_errors=True)
+                context.on("page", self._attach_recorder)
+                page = context.new_page()
+                self._attach_recorder(page)
+                try:
+                    page.goto(self.url, wait_until="domcontentloaded")
+                except Error:
+                    self.logger.warning("initial_navigation_failed", url=self.url)
 
-            def terminal_listener() -> None:
-                while not self.stop_recording:
-                    try:
-                        cmd = input().strip().lower()
-                        if cmd in {"quit", ""}:
+                self.logger.info(
+                    "recorder_ready",
+                    commands="split: new function block, clear: remove last action, quit: stop and generate",
+                )
+
+                def terminal_listener() -> None:
+                    while not self.stop_recording:
+                        try:
+                            cmd = input().strip().lower()
+                            if cmd in {"quit", ""}:
+                                self.stop_recording = True
+                                break
+                            if cmd == "split":
+                                self.workflow_manager.split_workflow()
+                                self.logger.info("workflow_split")
+                            elif cmd == "clear":
+                                self.workflow_manager.clear_last_action()
+                                self.logger.info("workflow_action_cleared")
+                            else:
+                                self.logger.warning("unknown_command", command=cmd)
+                        except (KeyboardInterrupt, EOFError):
                             self.stop_recording = True
                             break
-                        if cmd == "split":
-                            self.workflow_manager.split_workflow()
-                            self.logger.info("workflow_split")
-                            print(
-                                "\n[SYSTEM] Split registered. Recording into next function block."
-                            )
-                        elif cmd == "clear":
-                            self.workflow_manager.clear_last_action()
-                            self.logger.info("workflow_action_cleared")
-                            print("\n[SYSTEM] Last action removed.")
-                        else:
-                            print(
-                                "\n[SYSTEM] Unknown command. Use split, clear, or quit."
-                            )
-                    except (KeyboardInterrupt, EOFError):
-                        self.stop_recording = True
-                        break
 
-            threading.Thread(target=terminal_listener, daemon=True).start()
-            while not self.stop_recording:
+                threading.Thread(target=terminal_listener, daemon=True).start()
+                while not self.stop_recording:
+                    try:
+                        page.wait_for_timeout(100)
+                    except Error:
+                        break
                 try:
-                    page.wait_for_timeout(100)
+                    context.close()
+                    browser.close()
                 except Error:
-                    break
-            try:
-                context.close()
-                browser.close()
-            except Error:
-                pass
+                    self.logger.warning("browser_close_failed")
+        except KeyboardInterrupt:
+            interrupted = True
+            self.stop_recording = True
+            self.logger.info("recorder_interrupted", url=self.url)
+
+        self.logger.info("recorder_stopped", url=self.url, interrupted=interrupted)
+        return not interrupted
