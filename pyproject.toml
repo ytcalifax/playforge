@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "playforge"
-version = "1.o.0"
+version = "1.0.0"
 description = "Interactive Playwright recorder that turns browser actions into code"
 readme = {file = "README.md", content-type = "text/markdown"}
 authors = [{name = "ytcalifax (98w)", email = "hello@98w.eu"}]
@@ -26,7 +26,7 @@ classifiers = [
     "Topic :: Utilities",
 ]
 keywords = ["playwright", "page-object", "recorder", "testing", "automation"]
-dependencies = ["playwright>=1.46.0", "ruff>=0.6.0"]
+dependencies = ["playwright>=1.62.0.0", "ruff>=0.16.46.0", "structlog>=26.1.0.0"]
 
 [project.urls]
 Homepage = "https://github.com/ytcalifax/playforge"
