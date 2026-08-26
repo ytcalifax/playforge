@@ -6,8 +6,8 @@ from typing import Any
 
 from playwright.sync_api import Error, Page, sync_playwright
 
-from ...logger.logger import get_logger
-from ...workflow.manager import WorkflowManager
+from playforge.logger.logger import get_logger
+from playforge.workflow.manager import WorkflowManager
 
 
 class InteractiveRecorder:
@@ -34,12 +34,12 @@ class InteractiveRecorder:
                 tag_name=action.get("tagName"),
                 element_id=action.get("id"),
             )
-        except Exception:
+        except (ValueError, TypeError, KeyError):
             self.logger.warning("record_action_parse_failed")
 
     def _attach_recorder(self, page: Page) -> None:
         page.on("console", self._on_console)
-        page.add_init_script("""
+        page.add_init_script(r"""
             (() => {
                 const sendAction = (data) => console.log("RECORD_ACTION:" + JSON.stringify(data));
                 const getText = (el) => {

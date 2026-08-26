@@ -2,10 +2,10 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from ..domain.logger import get_logger
-from ..domain.manager import WorkflowManager
-from ..domain.models import Action
-from ..domain.sanitizer import LocatorSanitizer
+from playforge.logger.logger import get_logger
+from playforge.workflow.manager import WorkflowManager
+from playforge.workflow.models import Action
+from playforge.workflow.sanitizer import LocatorSanitizer
 
 
 class CodeGenerator:
