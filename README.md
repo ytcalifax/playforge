@@ -80,4 +80,4 @@ Each captured workflow becomes a method in the generated page object. Repeated a
 Issues and pull requests are welcome. If you hit a weird recorder edge case, open an issue with the page flow and the generated output.
 
 ---
-*Built for browser automation and code generation. MIT Licensed.*
+*Built with ❤️ for browser automation and code generation. MIT Licensed.*
