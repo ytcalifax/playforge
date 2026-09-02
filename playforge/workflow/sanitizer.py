@@ -34,11 +34,26 @@ class LocatorSanitizer:
 
     @staticmethod
     def escape_selector_value(value: str) -> str:
-        return value.replace("\\", "\\\\").replace("'", "\\'")
+        text = str(value)
+        if not text:
+            return ""
+        escaped = []
+        for char in text:
+            if char.isalnum() or char in {"-", "_"}:
+                escaped.append(char)
+            else:
+                escaped.append(f"\\{char}")
+        return "".join(escaped)
 
     @staticmethod
-    def quote_text_selector(value: str) -> str:
-        return f"text='{LocatorSanitizer.escape_selector_value(value)}'"
+    def escape_attr_value(value: str) -> str:
+        """Escape a value for embedding in a quoted CSS attribute selector.
+
+        Unlike an identifier (``#id``), an attribute value sits inside a CSS
+        string literal, so only backslashes and the quote character itself
+        need escaping (no need to backslash-escape every space or symbol).
+        """
+        return str(value).replace("\\", "\\\\").replace('"', '\\"')
 
     @staticmethod
     def sanitize_var_name(text: str) -> str:

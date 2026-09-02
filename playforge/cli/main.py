@@ -24,6 +24,11 @@ def main() -> None:
     parser.add_argument(
         "--headless", action="store_true", help="Run browser in headless mode"
     )
+    parser.add_argument(
+        "--with-playback",
+        action="store_true",
+        help="Emit a generated main() that auto-runs the recorded workflow",
+    )
     args = parser.parse_args()
 
     if not args.url:
@@ -41,5 +46,5 @@ def main() -> None:
     if not completed:
         logger.info("cli_interrupted")
         return
-    CodeGenerator(workflow_manager).generate(args.output)
-    logger.info("cli_finished", output=args.output)
+    CodeGenerator(workflow_manager).generate(args.output, with_playback=args.with_playback)
+    logger.info("cli_finished", output=args.output, with_playback=args.with_playback)

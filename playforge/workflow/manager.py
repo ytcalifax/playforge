@@ -8,6 +8,13 @@ class WorkflowManager:
 
     def __init__(self) -> None:
         self._workflows: list[Workflow] = [Workflow()]
+        self.start_url = ""
+
+    def set_start_url(self, url: str) -> None:
+        self.start_url = str(url or "").strip()
+
+    def get_start_url(self) -> str:
+        return self.start_url
 
     def add_action(self, action: dict) -> None:
         normalized = Action.from_mapping(action)

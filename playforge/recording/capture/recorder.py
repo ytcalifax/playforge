@@ -57,20 +57,43 @@ class InteractiveRecorder:
                     const idx = all.indexOf(el);
                     return idx >= 0 ? idx : 0;
                 };
-                const getElementId = (el) => {
-                    if (!el) return '';
-                    if (el.id) return el.id;
-                    const labeledBy = el.getAttribute && el.getAttribute('aria-label');
-                    if (labeledBy) return labeledBy.trim();
-                    if ('name' in el && typeof el.name === 'string' && el.name.trim()) return el.name.trim();
-                    if ('placeholder' in el && typeof el.placeholder === 'string' && el.placeholder.trim()) return el.placeholder.trim();
-                    if (el.getAttribute) {
+                // Each of these returns only a genuine attribute value (or '').
+                // They must never fall back to text/tag content: the generator
+                // treats each one as a distinct, real selector strategy, and
+                // conflating them (e.g. using visible text as a fake "id")
+                // produces selectors that never match the real DOM.
+                const getRealId = (el) => (el && el.id) ? el.id : '';
+                const getAriaLabel = (el) => {
+                    const value = el && el.getAttribute && el.getAttribute('aria-label');
+                    return value ? value.trim() : '';
+                };
+                const getName = (el) => {
+                    if (el && 'name' in el && typeof el.name === 'string' && el.name.trim()) return el.name.trim();
+                    return '';
+                };
+                const getPlaceholder = (el) => {
+                    if (el && 'placeholder' in el && typeof el.placeholder === 'string' && el.placeholder.trim()) return el.placeholder.trim();
+                    return '';
+                };
+                const getTestId = (el) => {
+                    if (el && el.getAttribute) {
                         const testId = el.getAttribute('data-testid') || el.getAttribute('data-test') || el.getAttribute('data-qa');
                         if (testId) return testId.trim();
                     }
-                    const text = getText(el);
-                    if (text) return text;
-                    return el.tagName ? el.tagName.toLowerCase() : '';
+                    return '';
+                };
+                const getIdentifiers = (el) => ({
+                    id: getRealId(el),
+                    ariaLabel: getAriaLabel(el),
+                    name: getName(el),
+                    placeholder: getPlaceholder(el),
+                    testId: getTestId(el)
+                });
+                const getInputType = (el) => {
+                    if (el && el.tagName && el.tagName.toLowerCase() === 'input' && typeof el.type === 'string') {
+                        return el.type.toLowerCase();
+                    }
+                    return '';
                 };
                 const isInteractive = (el) => {
                     if (!el || !el.tagName) return false;
@@ -84,12 +107,12 @@ class InteractiveRecorder:
                         sendAction({
                             type: 'click',
                             tagName: el.tagName ? el.tagName.toLowerCase() : '',
-                            id: getElementId(el),
                             className: typeof el.className === 'string' ? el.className.trim() : '',
                             text: getText(el),
                             isLambdaRole: Boolean(el.tagName && el.tagName.toLowerCase() === 'a' && el.parentElement && el.parentElement.getAttribute('role')),
                             value: el.value || '',
-                            position: getSiblingPosition(el)
+                            position: getSiblingPosition(el),
+                            ...getIdentifiers(el)
                         });
                     }, true);
                     document.addEventListener('dblclick', (e) => {
@@ -99,13 +122,13 @@ class InteractiveRecorder:
                         if (!['label', 'p', 'span', 'div', 'li', 'td', 'th', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'strong', 'small'].includes(tag)) return;
                         const textVal = getText(el);
                         if (!textVal) return;
-                        sendAction({ type: 'get', tagName: tag, id: getElementId(el), className: typeof el.className === 'string' ? el.className.trim() : '', text: textVal, isLambdaRole: false, value: '', position: getSiblingPosition(el) });
+                        sendAction({ type: 'get', tagName: tag, className: typeof el.className === 'string' ? el.className.trim() : '', text: textVal, isLambdaRole: false, value: '', position: getSiblingPosition(el), ...getIdentifiers(el) });
                     }, true);
                     document.addEventListener('change', (e) => {
                         const el = e.target;
                         if (!el) return;
                         const isSelect = el.tagName && el.tagName.toLowerCase() === 'select';
-                        sendAction({ type: isSelect ? 'select' : 'fill', tagName: el.tagName ? el.tagName.toLowerCase() : '', id: getElementId(el), className: typeof el.className === 'string' ? el.className.trim() : '', text: getText(el), isLambdaRole: false, value: el.value || '', position: getSiblingPosition(el) });
+                        sendAction({ type: isSelect ? 'select' : 'fill', tagName: el.tagName ? el.tagName.toLowerCase() : '', className: typeof el.className === 'string' ? el.className.trim() : '', text: getText(el), isLambdaRole: false, value: el.value || '', position: getSiblingPosition(el), inputType: getInputType(el), ...getIdentifiers(el) });
                     }, true);
                 });
             })();
@@ -121,6 +144,7 @@ class InteractiveRecorder:
                 page = context.new_page()
                 self._attach_recorder(page)
                 context.on("page", self._attach_recorder)
+                self.workflow_manager.set_start_url(self.url)
                 try:
                     page.goto(self.url, wait_until="domcontentloaded")
                 except Error:
